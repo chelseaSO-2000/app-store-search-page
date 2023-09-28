@@ -1,0 +1,44 @@
+.container {
+  border-bottom: 1px solid #ababab;
+  display: flex;
+  align-items: center;
+  padding: 18px 4px;
+}
+
+.number {
+  margin-right: 35px;
+  color: #717171;
+}
+
+.container img,
+div {
+  margin-right: 15px;
+}
+
+.container *:last-child {
+  margin-right: 0;
+}
+
+.inner-div label,
+p,
+div {
+  margin: 0;
+}
+
+.inner-div p {
+  padding: 15px 0px;
+  color: #737373;
+}
+
+.icon {
+  width: 115px;
+  height: 115px;
+}
+
+.icon-rectangle {
+  border-radius: 30px;
+}
+
+.icon-circle {
+  border-radius: 60px;
+}
