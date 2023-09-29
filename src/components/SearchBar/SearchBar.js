@@ -1,5 +1,7 @@
-// import "./SearchBar.css";
+import debounce from "lodash/debounce";
 import styled from "styled-components";
+import React, { useCallback } from "react";
+
 const Div = styled.div`
   position: sticky;
   top: 0;
@@ -22,14 +24,17 @@ const Input = styled.input`
 `;
 
 const SearchBar = (props) => {
+  const debounceSearch = debounce((searchVal) => {
+    props.onChange(searchVal);
+  }, 400);
+
+  const inputChangeHandler = (event) => {
+    debounceSearch(event.target.value);
+  };
+
   return (
     <Div>
-      <Input
-        // value={input}`
-        onChange={(event) => props.onChange(event.target.value)}
-        type="text"
-        placeholder="🔍  搜尋"
-      />
+      <Input onChange={inputChangeHandler} type="text" placeholder="🔍  搜尋" />
     </Div>
   );
 };

@@ -1,3 +1,4 @@
+import { useQuery } from "react-query";
 import { useEffect, useMemo, useState } from "react";
 import SearchBar from "./components/SearchBar/SearchBar";
 import RecomList from "./components/Recommendation/RecomList";
@@ -6,38 +7,59 @@ import FreeAppList from "./components/FreeApp/FreeAppList";
 const ITEM_PER_PAGE = 10;
 
 function App() {
-  const [freeApplications, setFreeApplications] = useState([]);
-  const [recommenedApps, setRecommenedApps] = useState([]);
+  let [freeApplications, setFreeApplications] = useState([]);
+  const [recommendedApps, setRecommenedApps] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [displayedItems, setDisplayedItems] = useState([]);
   const [keyword, setKeyWord] = useState("");
 
-  useEffect(() => {
-    fetch("https://itunes.apple.com/hk/rss/topfreeapplications/limit=100/json")
-      .then((response) => response.json())
-      .then((data) => {
-        const items = data.feed.entry;
-        setFreeApplications(items);
-        // console.log(items[6]);setData
-      });
+  // useEffect(() => {
+  const fetchFreeAPI = async () => {
+    const res = await fetch(
+      "https://itunes.apple.com/hk/rss/topfreeapplications/limit=100/json"
+    );
+    const data = await res.json();
+    return data;
+  };
 
-    fetch(
+  const fetchRecomAPI = async () => {
+    const res = await fetch(
       "https://itunes.apple.com/hk/rss/topgrossingapplications/limit=10/json"
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        const items = data.feed.entry;
-        setRecommenedApps(items);
-      });
-  }, []);
+    );
+    const data = await res.json();
+    return data;
+  };
+  // }, []);
 
-  // useEffect(() => console.log("keyword", keyword), [keyword]);
+  const { data: FreeAppData, isSuccess: FreeAppIsSuccess } = useQuery(
+    "FreeAppAPI",
+    fetchFreeAPI,
+    {
+      refetchOnWindowFocus: false,
+    }
+  );
 
-  // // Logging
-  // useEffect(
-  //   () => console.log("displayedItems length", displayedItems.length),
-  //   [displayedItems]
-  // );
+  const { data: RecomAppData, isSuccess: RecomAppIsSuccess } = useQuery(
+    "RecomAPI",
+    fetchRecomAPI,
+    {
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  useEffect(() => {
+    if (FreeAppIsSuccess && FreeAppData) {
+      const freeApplications = FreeAppData.feed.entry;
+      setFreeApplications(freeApplications);
+    }
+  }, [FreeAppIsSuccess, FreeAppData]);
+
+  useEffect(() => {
+    if (RecomAppIsSuccess && RecomAppData) {
+      const recommendedApps = RecomAppData.feed.entry;
+      setRecommenedApps(recommendedApps);
+    }
+  }, [RecomAppIsSuccess, RecomAppData]);
 
   const searchByKeyword = (keyword) => {
     const keywordToLowerCase = keyword.toLowerCase();
@@ -49,34 +71,47 @@ function App() {
       item.summary?.toLowerCase()?.includes(keywordToLowerCase);
   };
 
-  // item.label?.includes?.(keyword);
+  const extractedItems = useMemo(() => {
+    return freeApplications
+      .map((item) => ({
+        key: item.id.attributes["im:id"],
+        icon: item["im:image"][2].label,
+        label: item["im:name"].label,
+        author: item["im:artist"].label,
+        summary: item["summary"].label,
+        category: item.category.attributes.label,
+      }))
+      .filter(searchByKeyword(keyword));
+  }, [freeApplications, keyword]);
 
-  // const item = {};
-  // console.log("item", item);
-  // console.log("item.label", item.label);
-  // console.log("item.label?.includes", item.label?.includes);
-  // console.log("item.label.includes('abc')", item.label.includes("abc"));
-  // item.label?.includes // function() {}
+  const extractedRecItems = useMemo(() => {
+    return recommendedApps
+      .map((item) => ({
+        key: item.id.attributes["im:id"],
+        label: item["im:name"].label,
+        icon: item["im:image"][2].label,
+        category: item.category.attributes.label,
+      }))
+      .filter(searchByKeyword(keyword));
+  }, [recommendedApps, keyword]);
 
-  const extractedItems = freeApplications
-    .map((item) => ({
-      key: item.id.attributes["im:id"],
-      icon: item["im:image"][2].label,
-      label: item["im:name"].label,
-      author: item["im:artist"].label,
-      summary: item["summary"].label,
-      category: item.category.attributes.label,
-    }))
-    .filter(searchByKeyword(keyword));
+  useEffect(() => {
+    const newDisplayedItems = freeApplications
+      .map((item) => ({
+        key: item.id.attributes["im:id"],
+        icon: item["im:image"][2].label,
+        label: item["im:name"].label,
+        author: item["im:artist"].label,
+        summary: item["summary"].label,
+        category: item.category.attributes.label,
+      }))
+      .filter(searchByKeyword(keyword))
+      .slice(0, currentPage * ITEM_PER_PAGE);
 
-  const extractedRecItems = recommenedApps
-    .map((item) => ({
-      key: item.id.attributes["im:id"],
-      label: item["im:name"].label,
-      icon: item["im:image"][2].label,
-      category: item.category.attributes.label,
-    }))
-    .filter(searchByKeyword(keyword));
+    if (JSON.stringify(newDisplayedItems) !== JSON.stringify(displayedItems)) {
+      setDisplayedItems(newDisplayedItems);
+    }
+  }, [currentPage, freeApplications, displayedItems, keyword]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -95,17 +130,6 @@ function App() {
       window.removeEventListener("scroll", handleScroll);
     };
   }, [currentPage, extractedItems]);
-
-  useEffect(() => {
-    const newDisplayedItems = extractedItems.slice(
-      0,
-      currentPage * ITEM_PER_PAGE
-    );
-
-    if (JSON.stringify(newDisplayedItems) !== JSON.stringify(displayedItems)) {
-      setDisplayedItems(newDisplayedItems);
-    }
-  }, [currentPage, extractedItems, displayedItems]);
 
   return (
     <div>

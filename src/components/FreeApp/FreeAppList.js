@@ -9,7 +9,6 @@ const FreeAppList = (props) => {
           label={app.label}
           icon={app.icon}
           category={app.category}
-          starRating={app.starRating}
         />
       ))}
     </ul>
